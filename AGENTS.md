@@ -1,8 +1,8 @@
 # Agenda de atendimentos da clínica
 
-Aplicação acadêmica em `clinica-crud/`: Python 3.10+, Streamlit 1.64 e SQLite, testes com pytest. Escopo, regras RN1–RN6 e decisões: `clinica-crud/README.md`.
+Aplicação acadêmica: Python 3.10+, Streamlit 1.64 e SQLite, testes com pytest. Escopo, regras RN1–RN6 e decisões: `README.md`.
 
-## Comandos (em `clinica-crud/`, Windows/PowerShell)
+## Comandos (na pasta principal, Windows/PowerShell)
 
 - Instalar: `python -m venv .venv; .\.venv\Scripts\python.exe -m pip install -r requirements.txt`
 - Dados fictícios: `.\.venv\Scripts\python.exe seed.py`
@@ -17,11 +17,12 @@ Aplicação acadêmica em `clinica-crud/`: Python 3.10+, Streamlit 1.64 e SQLite
 - Cada operação abre sua conexão; escritas usam `BEGIN IMMEDIATE`. Preserve os índices únicos parciais (RN1/RN2).
 - Privacidade (RN6): nenhum campo clínico. Serviço e observação são catálogos fechados validados no banco.
 - Cancelamento e exclusão exigem `confirmado=True` na API e caixa de confirmação na interface (RN5).
+- Cores ficam nos temas claro/escuro de `.streamlit/config.toml`; não fixe cores no CSS de `app.py`.
 
 ## Acordos de trabalho
 
 - Leia o código e o README antes de editar; faça a menor mudança completa e reutilize os padrões existentes.
 - Toda regra nova ganha teste em `test_db.py`; todo fluxo de tela, em `test_app.py` (AppTest, banco temporário).
 - Testes nunca tocam `clinica.db`; use `tmp_path` e `CLINICA_DB`. Dados de exemplo são sempre fictícios.
-- Atualize `clinica-crud/README.md` junto com mudanças de comportamento, comandos ou modelo.
+- Atualize `README.md` junto com mudanças de comportamento, comandos ou modelo.
 - Não publique, não envie mensagens a terceiros e não apague o banco de demonstração sem pedido explícito.
