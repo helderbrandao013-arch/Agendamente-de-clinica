@@ -10,7 +10,7 @@ from threading import Barrier
 
 import pytest
 
-from db import BancoClinica, ErroDeNegocio, OBSERVACOES, SERVICOS, horarios_do_dia
+from db import BancoClinica, ErroDeNegocio, OBSERVACOES, SERVICOS, horarios_do_dia, link_whatsapp
 
 
 DIA = "2026-09-28"  # Segunda-feira; data fixa para testes reproduzíveis.
@@ -419,3 +419,42 @@ def test_chave_estrangeira_sqlite_preserva_historico(banco, cadastros):
         with pytest.raises(sqlite3.IntegrityError):
             con.execute("DELETE FROM profissionais WHERE id = ?", (cadastros["f1"],))
     assert len(banco.listar_atendimentos(DIA)) == 1
+
+
+def test_proximo_dia_com_vaga_pula_dia_lotado_e_fim_de_semana(banco, cadastros):
+    for hora in horarios_do_dia(DIA):
+        agendar(banco, cadastros, instante=f"{DIA} {hora}")
+    assert banco.proximo_dia_com_vaga(DIA, cadastros["p1"], cadastros["f1"]) == date(2026, 9, 29)
+    assert banco.proximo_dia_com_vaga(DIA, cadastros["p2"], cadastros["f2"]) == date(2026, 9, 28)
+    assert banco.proximo_dia_com_vaga("2026-10-03", cadastros["p1"], cadastros["f1"]) == date(2026, 10, 5)
+    assert banco.proximo_dia_com_vaga(DIA, cadastros["p1"], cadastros["f1"], dias=1) is None
+
+
+def test_historico_do_paciente_mais_recente_primeiro(banco, cadastros):
+    primeiro = agendar(banco, cadastros)
+    segundo = agendar(banco, cadastros, profissional="f2", instante="2026-09-29 09:10")
+    agendar(banco, cadastros, paciente="p2", instante="2026-09-30 08:30")
+    mudar_situacao(banco, primeiro, "falta")
+    historico = banco.listar_atendimentos_paciente(cadastros["p1"])
+    assert [a["id"] for a in historico] == [segundo, primeiro]
+    assert historico[0]["profissional"] == "Bruno Exemplo"
+    assert historico[1]["situacao"] == "falta"
+    assert banco.listar_atendimentos_paciente(cadastros["p3"]) == []
+    with pytest.raises(ErroDeNegocio, match="não encontrado"):
+        banco.listar_atendimentos_paciente(999)
+
+
+@pytest.mark.parametrize("telefone,numero", [
+    ("(85) 99999-0001", "5585999990001"),
+    ("85 3333-0001", "558533330001"),
+    ("+55 85 99999-0001", "5585999990001"),
+])
+def test_link_whatsapp_normaliza_telefone_e_codifica_mensagem(telefone, numero):
+    link = link_whatsapp(telefone, "Olá, Ana! Atendimento às 08:30.")
+    assert link.startswith(f"https://wa.me/{numero}?text=")
+    assert " " not in link and "%C3%A1" in link
+
+
+@pytest.mark.parametrize("telefone", ["", "9999-0001", "123", "telefone"])
+def test_link_whatsapp_rejeita_telefone_sem_ddd(telefone):
+    assert link_whatsapp(telefone, "Olá") is None

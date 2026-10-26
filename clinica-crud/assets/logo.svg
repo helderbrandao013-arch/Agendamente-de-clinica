@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Clínica · Agenda">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1fa396"/>
+      <stop offset="1" stop-color="#0f6b64"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#fundo)"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="14" y="18" width="36" height="32" rx="6" stroke-width="3.5"/>
+    <path d="M14 27h36" stroke-width="3.5"/>
+    <path d="M23 13v9M41 13v9" stroke-width="3.5"/>
+    <path d="M32 31.5v13M25.5 38h13" stroke-width="4"/>
+  </g>
+</svg>

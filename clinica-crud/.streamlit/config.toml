@@ -1,0 +1,30 @@
+# Temas claro e escuro. Por padrão segue o sistema; o menu ⋮ alterna entre System, Light e Dark.
+[theme]
+baseRadius = "0.75rem"
+showSidebarBorder = true
+headingFont = "sans-serif"
+
+[theme.light]
+primaryColor = "#16857d"
+backgroundColor = "#f7fbfa"
+secondaryBackgroundColor = "#e6f2f0"
+textColor = "#13302c"
+borderColor = "#cfe3df"
+linkColor = "#0f6b64"
+
+[theme.light.sidebar]
+backgroundColor = "#edf6f4"
+
+[theme.dark]
+primaryColor = "#2bb3a3"
+backgroundColor = "#0e1716"
+secondaryBackgroundColor = "#182625"
+textColor = "#e3efed"
+borderColor = "#274541"
+linkColor = "#5fd3c4"
+
+[theme.dark.sidebar]
+backgroundColor = "#121e1d"
+
+[browser]
+gatherUsageStats = false

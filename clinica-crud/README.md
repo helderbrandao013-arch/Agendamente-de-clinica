@@ -77,21 +77,23 @@ Também é possível executar `python seed.py --banco caminho/do/arquivo.db`; es
 |---|---|
 | `db.py` | Toda a persistência, validação e regras de negócio; sem import de Streamlit. |
 | `app.py` | Interface com as cinco páginas e mensagens amigáveis de `ErroDeNegocio`. |
-| `test_db.py` | 93 casos de teste para regras, CRUD, SQL injection e concorrência. |
-| `test_app.py` | 18 casos de integração com Streamlit AppTest, incluindo confirmações da RN5. |
+| `test_db.py` | Testes de regras, CRUD, SQL injection, concorrência, histórico, próximo dia com vaga e link do WhatsApp. |
+| `test_app.py` | Integração com Streamlit AppTest, incluindo confirmações da RN5, grade do dia e histórico. |
 | `seed.py` | Carga de dados fictícios em banco vazio. |
 | `requirements.txt` | Versões das dependências utilizadas. |
-| `.streamlit/config.toml` | Tema visual e configuração de telemetria do Streamlit. |
-| `.gitignore` | Evita versionar bancos locais, caches e ambientes virtuais. |
+| `.streamlit/config.toml` | Temas claro e escuro (seguem o sistema; troca no menu ⋮) e telemetria desligada. |
+| `assets/` | Logo (`logo.svg`) e versões com nome para fundo claro e escuro, usadas no README. |
+| `../.gitignore` | Evita versionar bancos locais, caches e ambientes virtuais. |
+| `../AGENTS.md`, `../CLAUDE.md` | Comandos e limites do projeto para assistentes de código (modelo do Vibe Coding Toolkit). |
 | `README.md` | Problema, requisitos, modelo, decisões e instruções. |
 
 ## Requisitos funcionais e uso das páginas
 
 | Página | Operações disponíveis |
 |---|---|
-| Agenda do dia | Listar por data e profissional, reagendar, trocar profissional, mudar situação, editar serviço/observação e excluir atendimento incorreto com confirmação. |
-| Novo agendamento | Selecionar paciente, profissional, dia, horário livre, serviço e observação administrativa. |
-| Pacientes | Cadastrar, listar, buscar por nome/telefone, editar e excluir quando não houver histórico. |
+| Agenda do dia | Listar por data e profissional, ver a grade de horários livres/ocupados por profissional, enviar lembrete pelo WhatsApp, reagendar, trocar profissional, mudar situação, editar serviço/observação e excluir atendimento incorreto com confirmação. |
+| Novo agendamento | Selecionar paciente, profissional, dia, horário livre, serviço e observação administrativa. Sem vaga no dia, sugere o próximo dia com vaga para ambos. |
+| Pacientes | Cadastrar, listar, buscar por nome/telefone, editar, consultar o histórico de atendimentos e excluir quando não houver histórico. |
 | Profissionais | Cadastrar, listar, editar e excluir quando não houver histórico. |
 | Relatórios | Consultar total, cancelados, faltas, taxa de faltas e faltas por profissional em um período. |
 
@@ -153,6 +155,11 @@ Todas as entradas externas em SQL são vinculadas por parâmetros `?`. Instruç�
 9. **Busca:** nome e telefone aceitam trechos literais. A busca por nome ignora maiúsculas/minúsculas com `casefold`, inclusive em nomes acentuados. Apóstrofos, `%`, `_` e textos de SQL são tratados como dados.
 10. **Privacidade:** serviço e observação usam listas fechadas, conforme escolha confirmada. Campos de nome, telefone e especialidade devem ser usados somente para sua finalidade. O sistema não faz classificação semântica do conteúdo desses campos. Os exemplos e testes usam dados fictícios.
 
+11. **Horários de hoje:** em Novo agendamento, no dia atual, só aparecem horários que ainda não começaram. Datas anteriores a hoje continuam permitidas para registro retroativo, com aviso na tela.
+12. **Próximo dia com vaga:** quando o dia escolhido não tem vaga, a tela procura nos 30 dias seguintes o primeiro dia útil livre para o paciente e o profissional ao mesmo tempo.
+13. **Lembrete pelo WhatsApp:** para atendimentos agendados, a agenda gera um link `wa.me` com nome, serviço, profissional, data e hora — somente dados administrativos. O link apenas abre o WhatsApp; a recepcionista revisa e envia. Telefones com DDD (10 ou 11 dígitos) recebem o código 55; números sem DDD mostram um aviso para atualizar o cadastro.
+14. **Grade do dia e histórico:** a grade mostra cada horário por profissional (cancelados aparecem como livres). O histórico do paciente lista os 50 atendimentos mais recentes e o total de faltas.
+
 ### Catálogos administrativos
 
 Serviços: `Consulta`, `Retorno` e `Atendimento administrativo`.
@@ -165,7 +172,9 @@ Os catálogos são validados pela API e por restrições `CHECK` no SQLite. Não
 
 O desenvolvimento seguiu a ordem: banco → testes do banco → interface → verificação das cinco páginas no navegador → documentação.
 
-Resultado da suíte conjunta após o ajuste final da interface:
+Após as melhorias 11–14 (Python 3.13.15, Streamlit 1.64.0, pytest 9.1.1, Windows), a suíte conjunta resultou em `125 passed in 19.06s`. Na primeira execução em um ambiente virtual recém-criado, um teste AppTest pode exceder o limite de 15 s enquanto o Streamlit é carregado; a nova execução passa.
+
+Resultado da suíte conjunta na versão entregue originalmente:
 
 ```text
 111 passed in 14.67s

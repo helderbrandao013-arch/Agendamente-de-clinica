@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 import sqlite3
+from urllib.parse import quote
 
 
 SITUACOES = ("agendado", "realizado", "cancelado", "falta")
@@ -65,6 +66,16 @@ def horarios_do_dia(dia):
         horarios.append(atual.strftime("%H:%M"))
         atual += passo
     return horarios
+
+
+def link_whatsapp(telefone, mensagem):
+    """Link wa.me com a mensagem pronta; None se o telefone não tiver DDD + número."""
+    digitos = "".join(c for c in str(telefone) if c.isdigit()).lstrip("0")  # Ignora o 0 de longa distância.
+    if len(digitos) in (10, 11):
+        digitos = "55" + digitos  # Número nacional: acrescenta o código do Brasil.
+    if len(digitos) not in (12, 13):
+        return None
+    return f"https://wa.me/{digitos}?text={quote(mensagem)}"
 
 
 def _data_hora(valor):
@@ -326,6 +337,26 @@ class BancoClinica:
                  paciente_id, profissional_id, ignorar_atendimento_id, ignorar_atendimento_id),
             )}
             return [hora for hora in horarios_do_dia(dia) if hora not in ocupados]
+
+    def proximo_dia_com_vaga(self, inicio, paciente_id, profissional_id, *, dias=30):
+        """Primeiro dia, a partir de `inicio`, com vaga para ambos; None se não houver no período."""
+        inicio = _data(inicio)
+        for deslocamento in range(dias):
+            dia = inicio + timedelta(days=deslocamento)
+            if dia.weekday() < 5 and self.horarios_livres(dia, paciente_id, profissional_id):
+                return dia
+        return None
+
+    def listar_atendimentos_paciente(self, paciente_id, limite=50):
+        """Histórico do paciente, do mais recente para o mais antigo."""
+        with self._conexao() as con:
+            self._paciente(con, paciente_id)
+            return [dict(r) for r in con.execute(
+                """SELECT a.*, pr.nome AS profissional FROM atendimentos a
+                   JOIN profissionais pr ON pr.id = a.profissional_id
+                   WHERE a.paciente_id = ? ORDER BY a.data_hora DESC, a.id DESC LIMIT ?""",
+                (paciente_id, limite),
+            )]
 
     def atualizar_atendimento(self, atendimento_id, *, data_hora=None, profissional_id=None,
                              servico=None, situacao=None, observacao=None, confirmado=False):

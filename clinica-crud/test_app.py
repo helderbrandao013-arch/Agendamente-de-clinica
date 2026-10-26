@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from db import BancoClinica, ErroDeNegocio
+from db import BancoClinica, ErroDeNegocio, horarios_do_dia
 
 
 ARQUIVO_APP = Path(__file__).with_name("app.py")
@@ -237,3 +237,46 @@ def test_horario_ocupado_por_outra_sessao_exige_nova_selecao(ambiente, cadastros
     assert any("ficou indisponível" in aviso.value for aviso in app.warning)
     assert elemento(app.button, "Agendar atendimento").disabled
     assert len(ambiente.listar_atendimentos(DIA)) == 1
+
+
+def test_agenda_mostra_grade_com_ocupados_e_livres(ambiente, cadastros):
+    ambiente.agendar_atendimento(cadastros["p1"], cadastros["f1"], "2026-09-28 08:30", "Consulta")
+    cancelado = ambiente.agendar_atendimento(cadastros["p2"], cadastros["f2"], "2026-09-28 08:30", "Consulta")
+    ambiente.atualizar_atendimento(cancelado, situacao="cancelado", confirmado=True)
+    app = abrir_agenda()
+    grade = app.dataframe[1].value
+    assert len(grade) == 28
+    assert grade.iloc[0][f"Alice Fictícia · #{cadastros['f1']}"] == "Ana Fictícia · Agendado"
+    assert grade.iloc[0][f"Bruno Fictício · #{cadastros['f2']}"] == "Livre"
+    assert grade.iloc[1][f"Alice Fictícia · #{cadastros['f1']}"] == "Livre"
+
+
+def test_paciente_mostra_historico_de_atendimentos(ambiente, cadastros):
+    atendimento_id = ambiente.agendar_atendimento(cadastros["p1"], cadastros["f1"], "2026-09-28 08:30", "Consulta")
+    ambiente.atualizar_atendimento(atendimento_id, situacao="falta")
+    app = abrir("Pacientes")
+    historico = app.dataframe[1].value
+    assert len(historico) == 1
+    assert historico.iloc[0]["Data"] == "28/09/2026"
+    assert historico.iloc[0]["Profissional"] == "Alice Fictícia"
+    assert historico.iloc[0]["Situação"] == "Falta"
+    assert any("1 falta(s)" in c.value for c in app.caption)
+
+
+def test_dia_lotado_sugere_proximo_dia_com_vaga(ambiente, cadastros):
+    for hora in horarios_do_dia(DIA):
+        ambiente.agendar_atendimento(cadastros["p1"], cadastros["f1"], f"2026-09-28 {hora}", "Consulta")
+    app = abrir("Novo agendamento")
+    elemento(app.date_input, "Dia do atendimento").set_value(DIA).run()
+    assert not app.exception
+    assert elemento(app.button, "Agendar atendimento").disabled
+    assert any("29/09/2026" in info.value for info in app.info)
+
+
+@pytest.mark.parametrize("telefone,mostra_aviso", [("85999990001", False), ("9999-0001", True)])
+def test_lembrete_whatsapp_exige_telefone_com_ddd(ambiente, cadastros, telefone, mostra_aviso):
+    ambiente.editar_paciente(cadastros["p1"], "Ana Fictícia", telefone)
+    ambiente.agendar_atendimento(cadastros["p1"], cadastros["f1"], "2026-09-28 08:30", "Consulta")
+    app = abrir_agenda()
+    assert not app.exception
+    assert any("Telefone sem DDD" in c.value for c in app.caption) is mostra_aviso
